@@ -13,7 +13,7 @@ export function Toasts() {
   const dismiss = useToastStore((s) => s.dismiss);
   if (toasts.length === 0) return null;
   return (
-    <div className="pointer-events-none fixed bottom-10 right-4 z-50 flex w-80 flex-col gap-2" aria-live="polite">
+    <div className="pointer-events-none fixed inset-x-3 bottom-20 z-[60] flex flex-col gap-2 sm:inset-x-auto sm:right-4 sm:w-80 " aria-live="polite">
       {toasts.map((toast) => (
         <div key={toast.id} className={cx('pointer-events-auto rounded-md border px-3 py-2 text-sm shadow-md', KIND_CLASS[toast.kind])} role="status">
           <div className="flex items-start justify-between gap-2">

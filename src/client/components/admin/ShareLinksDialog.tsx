@@ -89,7 +89,8 @@ export function ShareLinksDialog({ onClose }: Props) {
             {t.shareLinks.create}
           </button>
         </form>
-        <table className="w-full text-sm">
+        <div className="overflow-x-auto">
+        <table className="w-full min-w-[34rem] text-sm">
           <thead className="text-left text-xs text-gray-500">
             <tr>
               <th className="py-1 pr-2 font-medium">{t.shareLinks.label}</th>
@@ -126,6 +127,7 @@ export function ShareLinksDialog({ onClose }: Props) {
             )}
           </tbody>
         </table>
+        </div>
       </div>
     </Modal>
   );

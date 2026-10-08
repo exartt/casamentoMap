@@ -104,7 +104,8 @@ export function UsersDialog({ onClose }: Props) {
   return (
     <Modal title={t.users.title} open onClose={onClose} size="lg">
       <div className="flex flex-col gap-4">
-        <table className="w-full text-sm">
+        <div className="overflow-x-auto">
+        <table className="w-full min-w-[34rem] text-sm">
           <thead className="text-left text-xs text-gray-500">
             <tr>
               <th className="py-1 pr-2 font-medium">{t.users.name}</th>
@@ -149,6 +150,7 @@ export function UsersDialog({ onClose }: Props) {
             )}
           </tbody>
         </table>
+        </div>
 
         <form onSubmit={(e) => void create(e)} className="rounded-md border border-gray-200 bg-gray-50 p-3">
           <h3 className="mb-2 text-sm font-semibold">{t.users.create}</h3>

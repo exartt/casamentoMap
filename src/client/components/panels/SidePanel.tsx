@@ -8,7 +8,7 @@ import { PropertiesPanel } from './PropertiesPanel';
 import { VersionsPanel } from './VersionsPanel';
 import { WarningsPanel } from './WarningsPanel';
 
-type Props = { project: ProjectData };
+type Props = { project: ProjectData; variant?: 'side' | 'sheet' };
 
 const TABS: Array<{ id: PanelTab; label: string }> = [
   { id: 'guests', label: t.panels.guests },
@@ -18,10 +18,17 @@ const TABS: Array<{ id: PanelTab; label: string }> = [
 ];
 
 /** Right side panel with the four tabs: guests, properties, warnings and versions. */
-export function SidePanel({ project }: Props) {
+export function SidePanel({ project, variant = 'side' }: Props) {
   const activeTab = useUiStore((s) => s.activeTab);
   const setActiveTab = useUiStore((s) => s.setActiveTab);
   const warningCount = getDerived(project).warnings.length;
+  if (variant === 'sheet') {
+    return (
+      <div className="h-full p-3" role="tabpanel">
+        <PanelContent project={project} tab={activeTab} />
+      </div>
+    );
+  }
   return (
     <aside className="flex h-full w-80 shrink-0 flex-col border-l border-gray-200 bg-white" aria-label="Painel lateral">
       <div className="flex border-b border-gray-200" role="tablist">
@@ -45,11 +52,16 @@ export function SidePanel({ project }: Props) {
         ))}
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto p-3" role="tabpanel">
-        {activeTab === 'guests' && <GuestsPanel project={project} />}
-        {activeTab === 'properties' && <PropertiesPanel project={project} />}
-        {activeTab === 'warnings' && <WarningsPanel project={project} />}
-        {activeTab === 'versions' && <VersionsPanel />}
+        <PanelContent project={project} tab={activeTab} />
       </div>
     </aside>
   );
+}
+
+/** Content of one panel tab, shared by the desktop side panel and the mobile sheet. */
+function PanelContent({ project, tab }: { project: ProjectData; tab: PanelTab }) {
+  if (tab === 'guests') return <GuestsPanel project={project} />;
+  if (tab === 'properties') return <PropertiesPanel project={project} />;
+  if (tab === 'warnings') return <WarningsPanel project={project} />;
+  return <VersionsPanel />;
 }

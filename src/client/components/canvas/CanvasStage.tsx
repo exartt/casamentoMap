@@ -27,6 +27,7 @@ import { GridLayer } from './GridLayer';
 import { GUEST_DRAG_TYPE, PALETTE_DRAG_TYPE, type PaletteItem } from './PaletteTypes';
 import { SelectionTransformer } from './SelectionTransformer';
 import { setRegisteredStage } from './stageRegistry';
+import { isCompactLayout, useCoarsePointer } from '../../hooks/useMediaQuery';
 import { TableNode, type DragHandlers, type SeatColors } from './TableNode';
 import { TableTooltip } from './TableTooltip';
 
@@ -96,6 +97,7 @@ export function CanvasStage({ project, readOnly = false, externalHighlight = nul
   const setSelection = useProjectStore((s) => s.setSelection);
   const toggleSelection = useProjectStore((s) => s.toggleSelection);
 
+  const coarse = useCoarsePointer();
   const derived = getDerived(project);
   const interactive = !readOnly && !spaceHeld;
 
@@ -189,9 +191,20 @@ export function CanvasStage({ project, readOnly = false, externalHighlight = nul
         onTableTap?.(id);
         return;
       }
+      const ui = useUiStore.getState();
+      const isTable = getDerived(latest.current.project).tablesById.has(id);
+      if (ui.pendingSeatGuestId) {
+        if (isTable) {
+          const guestId = ui.pendingSeatGuestId;
+          ui.setPendingSeatGuest(null);
+          void seatGuest(guestId, id, null);
+        }
+        return;
+      }
       const shift = 'shiftKey' in e.evt && e.evt.shiftKey;
       if (shift) toggleSelection(id);
       else setSelection([id]);
+      if (e.type === 'tap' && isCompactLayout()) ui.setMobilePanel('properties');
     },
     [onTableTap, setSelection, toggleSelection],
   );
@@ -203,14 +216,22 @@ export function CanvasStage({ project, readOnly = false, externalHighlight = nul
         onTableTap?.(tableId);
         return;
       }
+      const ui = useUiStore.getState();
+      if (ui.pendingSeatGuestId) {
+        const guestId = ui.pendingSeatGuestId;
+        ui.setPendingSeatGuest(null);
+        void seatGuest(guestId, tableId, seatIndex);
+        return;
+      }
       const shift = 'shiftKey' in e.evt && e.evt.shiftKey;
       if (shift) {
         toggleSelection(tableId);
         return;
       }
       setSelection([tableId]);
-      useUiStore.getState().setActiveTab('properties');
-      useUiStore.getState().requestFocus({ type: 'table', id: tableId }, seatIndex);
+      ui.setActiveTab('properties');
+      if (e.type === 'tap' && isCompactLayout()) ui.setMobilePanel('properties');
+      ui.requestFocus({ type: 'table', id: tableId }, seatIndex);
     },
     [onTableTap, setSelection, toggleSelection],
   );
@@ -622,7 +643,10 @@ export function CanvasStage({ project, readOnly = false, externalHighlight = nul
         scaleY={scale}
         x={viewport.x}
         y={viewport.y}
-        draggable={spaceHeld || readOnly}
+        draggable={spaceHeld || readOnly || coarse}
+        onTap={(e) => {
+          if (e.target === e.target.getStage() && !latest.current.readOnly && !useUiStore.getState().pendingSeatGuestId) setSelection([]);
+        }}
         onWheel={handleWheel}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
@@ -689,7 +713,7 @@ export function CanvasStage({ project, readOnly = false, externalHighlight = nul
           )}
         </Layer>
       </Stage>
-      {!readOnly && <TableTooltip project={project} />}
+      {!readOnly && !coarse && <TableTooltip project={project} />}
     </div>
   );
 }

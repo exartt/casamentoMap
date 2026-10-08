@@ -82,7 +82,7 @@ function AuthGate() {
 
   if (screen.kind === 'loading') {
     return (
-      <main className="flex min-h-screen flex-col items-center justify-center gap-2 bg-gray-100 p-6 text-center text-gray-600">
+      <main className="flex min-h-[100dvh] flex-col items-center justify-center gap-2 bg-gray-100 p-6 text-center text-gray-600">
         <p>{t.app.loading}</p>
         {slow && <p className="text-sm text-gray-500">{t.app.loadingSlow}</p>}
       </main>
@@ -90,7 +90,7 @@ function AuthGate() {
   }
   if (screen.kind === 'error') {
     return (
-      <main className="flex min-h-screen flex-col items-center justify-center gap-3 bg-gray-100 p-6 text-center">
+      <main className="flex min-h-[100dvh] flex-col items-center justify-center gap-3 bg-gray-100 p-6 text-center">
         <p className="text-gray-800">{screen.message}</p>
         <button type="button" className={cx(btn.base, btn.primary)} onClick={() => void load()}>
           {t.app.retry}

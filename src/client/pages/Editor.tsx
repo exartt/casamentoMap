@@ -15,12 +15,16 @@ import { ImportProjectDialog } from '../components/dialogs/ImportProjectDialog';
 import { SettingsDialog } from '../components/dialogs/SettingsDialog';
 import { TableListDialog } from '../components/dialogs/TableListDialog';
 import { ShortcutsDialog } from '../components/dialogs/ShortcutsDialog';
+import { MobileNav } from '../components/mobile/MobileNav';
+import { MobileSheet } from '../components/mobile/MobileSheet';
+import { SeatPickBanner } from '../components/mobile/SeatPickBanner';
 import { SidePanel } from '../components/panels/SidePanel';
 import { PrintView } from '../components/print/PrintView';
 import { Palette } from '../components/toolbar/Palette';
 import { StatusBar } from '../components/toolbar/StatusBar';
 import { TopBar } from '../components/toolbar/TopBar';
 import { renderPlanDataUrl } from '../export/exportPng';
+import { useCompactLayout } from '../hooks/useMediaQuery';
 import { t } from '../i18n/strings';
 import { clearDraft, readDraft, scheduleDraft, shouldOfferDraft, type Draft } from '../persistence/draft';
 import { selectIsDirty, useProjectStore } from '../store/projectStore';
@@ -41,6 +45,7 @@ export function Editor() {
   const printImage = useUiStore((s) => s.printImage);
   const setPrintImage = useUiStore((s) => s.setPrintImage);
   const requestFit = useUiStore((s) => s.requestFit);
+  const compact = useCompactLayout();
   const [draft, setDraft] = useState<Draft | null>(null);
   const [draftChecked, setDraftChecked] = useState(false);
 
@@ -114,25 +119,28 @@ export function Editor() {
 
   return (
     <>
-    <div className="editor flex h-screen flex-col bg-gray-100 print:hidden">
+    <div className="editor flex h-[100dvh] flex-col overflow-hidden bg-gray-100 print:hidden">
       <TopBar onPrint={onPrint} />
       <div className="flex min-h-0 flex-1">
-        <Palette />
-        <main className="relative min-w-0 flex-1">
+        {!compact && <Palette />}
+        <main className="relative min-w-0 flex-1 overflow-hidden">
           <CanvasStage project={project} />
           <CanvasSearch project={project} />
           <button
             type="button"
-            className={cx(btn.base, btn.secondary, btn.small, 'absolute right-2 top-2 shadow')}
+            className={cx(btn.base, btn.secondary, compact ? btn.icon : btn.small, 'absolute right-2 top-2 z-10 shadow')}
             onClick={requestFit}
             title={t.topbar.fitToScreen}
+            aria-label={t.topbar.fitToScreen}
           >
-            ⤢ {t.topbar.fitToScreen}
+            ⤢{compact ? '' : ` ${t.topbar.fitToScreen}`}
           </button>
+          <SeatPickBanner project={project} />
+          {compact && <MobileSheet project={project} />}
         </main>
-        <SidePanel project={project} />
+        {!compact && <SidePanel project={project} />}
       </div>
-      <StatusBar />
+      {compact ? <MobileNav project={project} /> : <StatusBar />}
 
       <ConflictDialog />
       <ConfirmDialog />

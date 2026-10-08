@@ -8,6 +8,7 @@ import { colorForGroup, getDerived } from '../../store/derived';
 import { useProjectStore } from '../../store/projectStore';
 import { useUiStore } from '../../store/uiStore';
 import { GUEST_DRAG_TYPE } from '../canvas/PaletteTypes';
+import { useCoarsePointer, useCompactLayout } from '../../hooks/useMediaQuery';
 import { btn, cx, input, select } from '../common/ui';
 import { GuestFormDialog } from '../dialogs/GuestFormDialog';
 
@@ -16,6 +17,8 @@ type Props = { project: ProjectData };
 type Filter = 'all' | 'unseated' | 'seated';
 
 const ROW_HEIGHT = 44;
+
+const ROW_HEIGHT_TOUCH = 56;
 
 /** Guest list with search, filters, counters, drag to the canvas and quick actions. */
 export function GuestsPanel({ project }: Props) {
@@ -28,6 +31,11 @@ export function GuestsPanel({ project }: Props) {
   const setSelection = useProjectStore((s) => s.setSelection);
   const requestFocus = useUiStore((s) => s.requestFocus);
   const setDraggingGuestId = useUiStore((s) => s.setDraggingGuestId);
+  const setPendingSeatGuest = useUiStore((s) => s.setPendingSeatGuest);
+  const setMobilePanel = useUiStore((s) => s.setMobilePanel);
+  const compact = useCompactLayout();
+  const coarse = useCoarsePointer();
+  const rowHeight = coarse ? ROW_HEIGHT_TOUCH : ROW_HEIGHT;
 
   const list = useMemo(() => {
     return derived.sortedGuests.filter((g) => {
@@ -41,7 +49,7 @@ export function GuestsPanel({ project }: Props) {
   const virtualizer = useVirtualizer({
     count: list.length,
     getScrollElement: () => scrollRef.current,
-    estimateSize: () => ROW_HEIGHT,
+    estimateSize: () => rowHeight,
     overscan: 8,
   });
 
@@ -79,13 +87,13 @@ export function GuestsPanel({ project }: Props) {
           ))}
         </select>
       )}
-      <div className="flex items-center justify-between text-xs text-gray-600">
+      <div className="flex items-center justify-between gap-2 text-xs text-gray-600">
         <span>{t.guests.counters(counters.guests, counters.seated, counters.unseated)}</span>
-        <button type="button" className={cx(btn.base, btn.secondary, btn.small)} onClick={() => setEditing('new')}>
-          + {t.guests.addGuest}
+        <button type="button" className={cx(btn.base, btn.secondary, btn.small, 'shrink-0 whitespace-nowrap')} onClick={() => setEditing('new')} aria-label={t.guests.addGuest}>
+          + {compact ? t.mobile.newGuest : t.guests.addGuest}
         </button>
       </div>
-      <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto rounded-md border border-gray-200 bg-white">
+      <div ref={scrollRef} className="min-h-[13rem] flex-1 overflow-y-auto rounded-md border border-gray-200 bg-white">
         {project.guests.length === 0 ? (
           <p className="p-3 text-xs text-gray-500">{t.guests.empty}</p>
         ) : list.length === 0 ? (
@@ -131,6 +139,18 @@ export function GuestsPanel({ project }: Props) {
                       {guest.group ? ` · ${guest.group}` : ''}
                     </span>
                   </button>
+                  {compact && (
+                    <button
+                      type="button"
+                      className={cx(btn.base, btn.small, seat ? btn.secondary : btn.primary)}
+                      onClick={() => {
+                        setPendingSeatGuest(guest.id);
+                        setMobilePanel(null);
+                      }}
+                    >
+                      {t.mobile.seat}
+                    </button>
+                  )}
                   <button type="button" className={cx(btn.base, btn.ghost, btn.small)} onClick={() => setEditing(guest)} aria-label={t.guests.editGuest} title={t.guests.editGuest}>
                     ✎
                   </button>

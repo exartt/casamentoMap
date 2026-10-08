@@ -11,7 +11,8 @@ import { confirmDialog } from '../../store/confirmStore';
 import { selectIsDirty, useProjectStore } from '../../store/projectStore';
 import { toastError, toastSuccess } from '../../store/toastStore';
 import { useUiStore } from '../../store/uiStore';
-import { Menu } from '../common/Menu';
+import { useCompactLayout } from '../../hooks/useMediaQuery';
+import { Menu, type MenuItem } from '../common/Menu';
 import { btn, cx } from '../common/ui';
 
 type Props = { onPrint: () => void };
@@ -32,6 +33,7 @@ export function TopBar({ onPrint }: Props) {
   const openDialog = useUiStore((s) => s.openDialog);
   const requestFit = useUiStore((s) => s.requestFit);
   const setEventMode = useUiStore((s) => s.setEventMode);
+  const compact = useCompactLayout();
 
   if (!project || !user) return null;
   const saving = saveStatus === 'saving';
@@ -58,6 +60,58 @@ export function TopBar({ onPrint }: Props) {
       toastError(errorMessage(error));
     }
   };
+
+  if (compact) {
+    const items: MenuItem[] = [
+      { label: t.topbar.importGuests, onSelect: () => openDialog('importGuests') },
+      { label: t.topbar.tableList, onSelect: () => openDialog('tableList') },
+      { separator: true },
+      { label: t.topbar.exportPng, onSelect: () => void exportPng() },
+      { label: t.topbar.exportCsv, onSelect: () => { exportSeatingCsv(project); toastSuccess(t.export.csvDone); } },
+      { label: t.topbar.exportJson, onSelect: () => { downloadProjectJson(project); toastSuccess(t.export.jsonDone); } },
+      { label: t.topbar.print, onSelect: onPrint },
+      { separator: true },
+      { label: t.topbar.settings, onSelect: () => openDialog('settings') },
+      { label: t.topbar.renumber, onSelect: renumberAllTables },
+    ];
+    if (user.role === 'admin') {
+      items.push(
+        { separator: true },
+        { label: t.topbar.users, onSelect: () => openDialog('users') },
+        { label: t.topbar.shareLinks, onSelect: () => openDialog('shareLinks') },
+        { label: t.topbar.importProject, onSelect: () => openDialog('importProject') },
+      );
+    }
+    items.push(
+      { separator: true },
+      { label: `${t.topbar.changePassword} (${user.name})`, onSelect: () => openDialog('changePassword') },
+      { label: t.topbar.logout, onSelect: () => void logout(), danger: true },
+    );
+    return (
+      <header className="flex items-center gap-1.5 border-b border-gray-200 bg-white px-2 py-1.5 pt-[max(0.375rem,env(safe-area-inset-top))]">
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-sm font-semibold text-gray-900">{project.name}</div>
+          <div className={cx('truncate text-xs', saveError ? 'text-red-700' : dirty ? 'text-amber-700' : 'text-gray-500')} aria-live="polite">
+            {editingCopy !== null ? `${t.topbar.editingCopy(editingCopy)} · ` : ''}
+            {saveError ? saveError : dirty ? t.topbar.unsaved : t.topbar.saved(serverVersion)}
+          </div>
+        </div>
+        <button type="button" className={cx(btn.base, btn.ghost, btn.icon, 'text-lg')} disabled={!canUndo} onClick={undo} aria-label={t.topbar.undo}>
+          ↶
+        </button>
+        <button type="button" className={cx(btn.base, btn.ghost, btn.icon, 'text-lg')} disabled={!canRedo} onClick={redo} aria-label={t.topbar.redo}>
+          ↷
+        </button>
+        <button type="button" className={cx(btn.base, btn.primary, 'px-3')} disabled={!dirty || saving} onClick={() => void performSave()}>
+          {saving ? t.topbar.saving : t.app.save}
+        </button>
+        <button type="button" className={cx(btn.base, btn.secondary, btn.icon, 'border-brand-400 text-brand-800')} onClick={() => setEventMode(true)} aria-label={t.eventMode.button} title={t.eventMode.button}>
+          ★
+        </button>
+        <Menu label={<span className="text-lg leading-none">⋯</span>} ariaLabel={t.topbar.menu} align="right" hideChevron buttonClassName="h-10 w-10 p-0" items={items} />
+      </header>
+    );
+  }
 
   return (
     <header className="flex flex-wrap items-center gap-2 border-b border-gray-200 bg-white px-3 py-2">

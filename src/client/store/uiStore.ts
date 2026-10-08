@@ -3,6 +3,8 @@ import type { ElementRef } from '@shared/domain/types';
 
 export type PanelTab = 'guests' | 'properties' | 'warnings' | 'versions';
 
+export type MobilePanel = 'palette' | PanelTab;
+
 export type Viewport = { zoom: number; x: number; y: number };
 
 export type DropTarget = { tableId: string; seatIndex: number | null; refused: boolean };
@@ -40,6 +42,8 @@ export type UiState = {
   flashTableId: string | null;
   canvasSearch: string;
   eventMode: boolean;
+  mobilePanel: MobilePanel | null;
+  pendingSeatGuestId: string | null;
   shiftHeld: boolean;
   spaceHeld: boolean;
   dialog: DialogName;
@@ -59,6 +63,8 @@ export type UiState = {
   flashTable: (id: string | null) => void;
   setCanvasSearch: (query: string) => void;
   setEventMode: (on: boolean) => void;
+  setMobilePanel: (panel: MobilePanel | null) => void;
+  setPendingSeatGuest: (guestId: string | null) => void;
   setShiftHeld: (held: boolean) => void;
   setSpaceHeld: (held: boolean) => void;
   openDialog: (dialog: DialogName) => void;
@@ -81,6 +87,8 @@ export const useUiStore = create<UiState>((set, get) => ({
   flashTableId: null,
   canvasSearch: '',
   eventMode: false,
+  mobilePanel: null,
+  pendingSeatGuestId: null,
   shiftHeld: false,
   spaceHeld: false,
   dialog: null,
@@ -113,7 +121,9 @@ export const useUiStore = create<UiState>((set, get) => ({
   requestFocus: (ref, seatIndex = null) => set({ focusRequest: { ref, seatIndex, nonce: Date.now() } }),
   flashTable: (flashTableId) => set({ flashTableId }),
   setCanvasSearch: (canvasSearch) => set({ canvasSearch }),
-  setEventMode: (eventMode) => set({ eventMode, dialog: null }),
+  setEventMode: (eventMode) => set({ eventMode, dialog: null, mobilePanel: null, pendingSeatGuestId: null }),
+  setMobilePanel: (mobilePanel) => set(mobilePanel && mobilePanel !== 'palette' ? { mobilePanel, activeTab: mobilePanel } : { mobilePanel }),
+  setPendingSeatGuest: (pendingSeatGuestId) => set({ pendingSeatGuestId }),
   setShiftHeld: (shiftHeld) => {
     if (get().shiftHeld !== shiftHeld) set({ shiftHeld });
   },

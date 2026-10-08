@@ -93,7 +93,7 @@ export function EventDayView({ project, subtitle, note, onExit }: Props) {
   };
 
   return (
-    <div className="flex h-screen flex-col bg-gray-100">
+    <div className="flex h-[100dvh] flex-col bg-gray-100">
       <header className="border-b border-gray-200 bg-white px-3 py-2 sm:px-4">
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">

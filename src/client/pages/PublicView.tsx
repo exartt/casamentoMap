@@ -24,14 +24,14 @@ export function PublicView({ token }: Props) {
 
   if (error) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-gray-100 p-6 text-center">
+      <main className="flex min-h-[100dvh] items-center justify-center bg-gray-100 p-6 text-center">
         <p className="text-gray-700">{error}</p>
       </main>
     );
   }
   if (!project || !data) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-gray-100 p-6 text-center">
+      <main className="flex min-h-[100dvh] items-center justify-center bg-gray-100 p-6 text-center">
         <p className="text-gray-600">{t.app.loading}</p>
       </main>
     );

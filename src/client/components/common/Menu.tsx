@@ -9,10 +9,12 @@ type Props = {
   align?: 'left' | 'right';
   ariaLabel?: string;
   className?: string;
+  buttonClassName?: string;
+  hideChevron?: boolean;
 };
 
 /** Dropdown menu button with keyboard support and click-outside closing. */
-export function Menu({ label, items, align = 'left', ariaLabel, className }: Props) {
+export function Menu({ label, items, align = 'left', ariaLabel, className, buttonClassName, hideChevron = false }: Props) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const id = useId();
@@ -37,7 +39,7 @@ export function Menu({ label, items, align = 'left', ariaLabel, className }: Pro
     <div ref={ref} className={cx('relative', className)}>
       <button
         type="button"
-        className={cx(btn.base, btn.secondary)}
+        className={cx(btn.base, btn.secondary, buttonClassName)}
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={id}
@@ -45,13 +47,17 @@ export function Menu({ label, items, align = 'left', ariaLabel, className }: Pro
         onClick={() => setOpen((v) => !v)}
       >
         {label}
-        <span aria-hidden="true" className="text-xs">▾</span>
+        {!hideChevron && (
+          <span aria-hidden="true" className="text-xs">
+            ▾
+          </span>
+        )}
       </button>
       {open && (
         <div
           id={id}
           role="menu"
-          className={cx('absolute z-30 mt-1 min-w-[12rem] rounded-md border border-gray-200 bg-white py-1 shadow-lg', align === 'right' ? 'right-0' : 'left-0')}
+          className={cx('absolute z-40 mt-1 max-h-[75dvh] min-w-[13rem] overflow-y-auto rounded-md border border-gray-200 bg-white py-1 shadow-lg', align === 'right' ? 'right-0' : 'left-0')}
         >
           {items.map((item, i) =>
             'separator' in item ? (
@@ -63,7 +69,7 @@ export function Menu({ label, items, align = 'left', ariaLabel, className }: Pro
                 role="menuitem"
                 disabled={item.disabled}
                 className={cx(
-                  'block w-full px-3 py-1.5 text-left text-sm hover:bg-gray-100 disabled:opacity-50',
+                  'block w-full px-3 py-1.5 text-left text-sm hover:bg-gray-100 disabled:opacity-50 [@media(pointer:coarse)]:py-3 [@media(pointer:coarse)]:text-base',
                   item.danger ? 'text-red-700' : 'text-gray-800',
                 )}
                 onClick={() => {

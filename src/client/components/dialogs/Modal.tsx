@@ -55,17 +55,17 @@ export function Modal({ title, open, onClose, children, footer, size = 'md', clo
 
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4" onMouseDown={closeOnBackdrop ? onClose : undefined}>
+    <div className="fixed inset-0 z-50 flex items-stretch justify-center bg-black/40 p-0 sm:items-center sm:p-4" onMouseDown={closeOnBackdrop ? onClose : undefined}>
       <div
         ref={panelRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
         tabIndex={-1}
-        className={cx('flex max-h-[90vh] w-full flex-col rounded-lg bg-white shadow-xl outline-none', SIZES[size])}
+        className={cx('flex h-[100dvh] max-h-[100dvh] w-full flex-col bg-white shadow-xl outline-none sm:h-auto sm:max-h-[90dvh] sm:rounded-lg', SIZES[size])}
         onMouseDown={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between border-b border-gray-200 px-5 py-3">
+        <div className="flex items-center justify-between border-b border-gray-200 px-5 py-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
           <h2 id={titleId} className="text-base font-semibold text-gray-900">
             {title}
           </h2>
@@ -74,7 +74,7 @@ export function Modal({ title, open, onClose, children, footer, size = 'md', clo
           </button>
         </div>
         <div className="flex-1 overflow-y-auto px-5 py-4 text-sm text-gray-800">{children}</div>
-        {footer && <div className="flex flex-wrap justify-end gap-2 border-t border-gray-200 px-5 py-3">{footer}</div>}
+        {footer && <div className="flex flex-wrap justify-end gap-2 border-t border-gray-200 px-5 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">{footer}</div>}
       </div>
     </div>
   );

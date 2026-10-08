@@ -19,7 +19,7 @@ export function CanvasSearch({ project }: Props) {
   const matchedTables = result ? project.tables.filter((table) => result.tableIds.has(table.id)) : [];
 
   return (
-    <div className="absolute left-2 top-2 z-10 w-72 rounded-md bg-white/95 p-2 shadow">
+    <div className="absolute left-2 top-2 z-10 w-[calc(100%-4.5rem)] max-w-72 rounded-md bg-white/95 p-2 shadow">
       <div className="relative">
         <input
           type="text"

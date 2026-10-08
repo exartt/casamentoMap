@@ -111,6 +111,7 @@ Com exceção do `Ctrl+S`, os atalhos não funcionam enquanto um campo de texto 
 - **Busca no salão** (caixa no canto superior esquerdo do canvas): digite um nome e as mesas onde ele está sentado ganham destaque, com a cadeira marcada; as demais ficam esmaecidas. A lista abaixo da caixa leva até a mesa.
 - **Nomes por mesa** (botão na barra superior): todas as mesas, com o nome atual de cada uma, os assentos numerados e quem senta em cada um. Tem filtro, opção de ocultar assentos livres e "Copiar lista".
 - **Modo dia do evento** (botão ★ na barra superior): visão limpa e somente leitura, com a planta, quem está em cada mesa e uma busca grande para achar a pessoa. Tocar numa mesa mostra a lista dela. "Sair do modo evento" (ou Esc) volta ao editor. É a mesma tela usada pelos links de visualização (`/ver/<token>`).
+- **Celular e tablet**: em telas até 1023 px (e em tablets com toque até 1366 px) o canvas ocupa a tela inteira. Os painéis abrem pela barra inferior (**Adicionar · Convidados · Mesa · Avisos · Versões**) como gaveta: de baixo no celular, na lateral no tablet. As ações menos usadas ficam no menu **⋯** da barra superior. Um dedo arrasta o salão, dois dedos dão zoom, tocar numa mesa abre as propriedades dela. Para sentar alguém: **Convidados → Sentar** e depois toque na mesa (ou na cadeira exata).
 
 ## Como funciona o salvamento
 
