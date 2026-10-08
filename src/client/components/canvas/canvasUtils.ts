@@ -6,6 +6,12 @@ import type { Viewport } from '../../store/uiStore';
 
 export const FIT_PADDING_PX = 40;
 
+export const FIT_PADDING_MIN_PX = 10;
+
+export const FIT_PADDING_RATIO = 0.04;
+
+export const FOCUS_SPAN_M = 9;
+
 export const COLORS = {
   floor: '#fbfaf7',
   wall: '#3b3b3b',
@@ -51,7 +57,8 @@ export function clampZoom(zoom: number): number {
 
 /** Computes a viewport that shows the whole venue centered in the stage. */
 export function fitViewport(venue: Venue, stage: { width: number; height: number }): Viewport {
-  const available = { width: Math.max(stage.width - FIT_PADDING_PX * 2, 50), height: Math.max(stage.height - FIT_PADDING_PX * 2, 50) };
+  const pad = Math.max(FIT_PADDING_MIN_PX, Math.min(FIT_PADDING_PX, Math.min(stage.width, stage.height) * FIT_PADDING_RATIO));
+  const available = { width: Math.max(stage.width - pad * 2, 50), height: Math.max(stage.height - pad * 2, 50) };
   const zoom = clampZoom(Math.min(available.width / (venue.widthM * PX_PER_M), available.height / (venue.depthM * PX_PER_M)));
   const scale = zoom * PX_PER_M;
   return {
@@ -61,10 +68,25 @@ export function fitViewport(venue: Venue, stage: { width: number; height: number
   };
 }
 
-/** Computes a viewport that keeps the zoom and centers the given world point. */
-export function centerViewportOn(point: Point, viewport: Viewport, stage: { width: number; height: number }): Viewport {
+/** Computes a viewport that keeps the zoom and places the given world point at an anchor of the stage (fractions, center by default). */
+export function centerViewportOn(
+  point: Point,
+  viewport: Viewport,
+  stage: { width: number; height: number },
+  anchor: { x: number; y: number } = { x: 0.5, y: 0.5 },
+): Viewport {
   const scale = viewport.zoom * PX_PER_M;
-  return { zoom: viewport.zoom, x: stage.width / 2 - point.x * scale, y: stage.height / 2 - point.y * scale };
+  return { zoom: viewport.zoom, x: stage.width * anchor.x - point.x * scale, y: stage.height * anchor.y - point.y * scale };
+}
+
+/** Zoom that shows roughly FOCUS_SPAN_M meters across the smaller stage side, never below the given minimum. */
+export function focusZoom(stage: { width: number; height: number }, minZoom: number): number {
+  return clampZoom(Math.max(minZoom, Math.min(stage.width, stage.height) / (FOCUS_SPAN_M * PX_PER_M)));
+}
+
+/** Distance between two touch points. */
+export function touchDistance(a: Point, b: Point): number {
+  return Math.hypot(b.x - a.x, b.y - a.y);
 }
 
 /** Zooms around a screen point so the world point under the cursor stays fixed. */

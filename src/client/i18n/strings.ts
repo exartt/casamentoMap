@@ -409,6 +409,7 @@ export const t = {
     unsavedNote: 'Mostrando o que está no editor agora, inclusive alterações não salvas.',
     zoomIn: 'Aproximar',
     zoomOut: 'Afastar',
+    center: 'Centralizar',
   },
   canvasSearch: {
     placeholder: 'Buscar convidado no salão…',

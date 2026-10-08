@@ -19,7 +19,7 @@ import { addDoor, addFixture, addTable, commitDoorPlacement, commitPositions, se
 import { colorForGroup, getDerived, searchSeatedGuests } from '../../store/derived';
 import { useProjectStore } from '../../store/projectStore';
 import { useUiStore, type Viewport } from '../../store/uiStore';
-import { centerViewportOn, fitViewport, hitTestDrop, round2, screenToWorld, snapPosition, zoomAround } from './canvasUtils';
+import { centerViewportOn, fitViewport, focusZoom, hitTestDrop, round2, screenToWorld, snapPosition, touchDistance, zoomAround } from './canvasUtils';
 import { DoorClearance, DoorNode } from './DoorNode';
 import { DragOverlay } from './DragOverlay';
 import { FixtureNode } from './FixtureNode';
@@ -37,6 +37,7 @@ type Props = {
   onTableTap?: (id: string) => void;
   highlightQuery?: string;
   minimal?: boolean;
+  focusAnchor?: { x: number; y: number };
 };
 
 const ZOOM_FACTOR = 1.08;
@@ -46,6 +47,8 @@ const SELECTION_THRESHOLD_M = 0.1;
 const HIGHLIGHT_MS = 2500;
 
 const MINOR_GRID_MIN_ZOOM = 1.2;
+
+const ORIENTATION_REFIT_MS = 250;
 
 const seatColorsCache = new WeakMap<Table, { guests: Guest[]; colors: SeatColors }>();
 
@@ -64,7 +67,7 @@ function seatColorsFor(table: Table, project: ProjectData): SeatColors {
 }
 
 /** The floor-plan canvas: venue, grid, fixtures, tables and doors, with zoom, pan, selection and drops. */
-export function CanvasStage({ project, readOnly = false, externalHighlight = null, onTableTap, highlightQuery, minimal = false }: Props) {
+export function CanvasStage({ project, readOnly = false, externalHighlight = null, onTableTap, highlightQuery, minimal = false, focusAnchor }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<Konva.Stage>(null);
   const nodeRefs = useRef(new Map<string, Konva.Group>());
@@ -74,6 +77,8 @@ export function CanvasStage({ project, readOnly = false, externalHighlight = nul
   const panRef = useRef<{ startX: number; startY: number; viewport: Viewport } | null>(null);
   const selectStart = useRef<Point | null>(null);
   const fitted = useRef(false);
+  const userAdjusted = useRef(false);
+  const pinch = useRef<{ distance: number; center: Point } | null>(null);
   const [seatHighlight, setSeatHighlight] = useState<{ tableId: string; seatIndex: number | null } | null>(null);
 
   const viewport = useUiStore((s) => s.viewport);
@@ -94,8 +99,8 @@ export function CanvasStage({ project, readOnly = false, externalHighlight = nul
   const derived = getDerived(project);
   const interactive = !readOnly && !spaceHeld;
 
-  const latest = useRef({ project, selection, viewport, stageSize, readOnly });
-  latest.current = { project, selection, viewport, stageSize, readOnly };
+  const latest = useRef({ project, selection, viewport, stageSize, readOnly, focusAnchor });
+  latest.current = { project, selection, viewport, stageSize, readOnly, focusAnchor };
 
   useEffect(() => {
     if (readOnly) return;
@@ -116,15 +121,27 @@ export function CanvasStage({ project, readOnly = false, externalHighlight = nul
   }, [setStageSize]);
 
   useEffect(() => {
-    if (fitted.current || stageSize.width < 10) return;
+    if (stageSize.width < 10 || stageSize.height < 10) return;
+    if (fitted.current && (!readOnly || userAdjusted.current)) return;
     fitted.current = true;
     setViewport(fitViewport(project.venue, stageSize));
-  }, [stageSize, project.venue, setViewport]);
+  }, [stageSize, project.venue, setViewport, readOnly]);
 
   useEffect(() => {
     if (fitRequest === 0) return;
+    userAdjusted.current = false;
     setViewport(fitViewport(latest.current.project.venue, latest.current.stageSize));
   }, [fitRequest, setViewport]);
+
+  useEffect(() => {
+    if (!readOnly) return;
+    const onOrientation = () => {
+      userAdjusted.current = false;
+      setTimeout(() => setViewport(fitViewport(latest.current.project.venue, latest.current.stageSize)), ORIENTATION_REFIT_MS);
+    };
+    window.addEventListener('orientationchange', onOrientation);
+    return () => window.removeEventListener('orientationchange', onOrientation);
+  }, [readOnly, setViewport]);
 
   useEffect(() => {
     if (!focusRequest) return;
@@ -142,7 +159,15 @@ export function CanvasStage({ project, readOnly = false, externalHighlight = nul
       if (door) point = doorCenter(door, p.venue);
     }
     if (!point) return;
-    setViewport(centerViewportOn(point, latest.current.viewport, latest.current.stageSize));
+    const current = latest.current;
+    if (current.readOnly) {
+      const fitZoom = fitViewport(current.project.venue, current.stageSize).zoom;
+      const zoom = focusZoom(current.stageSize, Math.max(fitZoom, current.viewport.zoom));
+      userAdjusted.current = true;
+      setViewport(centerViewportOn(point, { ...current.viewport, zoom }, current.stageSize, current.focusAnchor));
+    } else {
+      setViewport(centerViewportOn(point, current.viewport, current.stageSize));
+    }
     if (!latest.current.readOnly) setSelection([ref.id]);
     if (ref.type === 'table') {
       setSeatHighlight({ tableId: ref.id, seatIndex });
@@ -335,6 +360,7 @@ export function CanvasStage({ project, readOnly = false, externalHighlight = nul
       const pointer = stage.getPointerPosition();
       if (!pointer) return;
       const vp = latest.current.viewport;
+      userAdjusted.current = true;
       const direction = e.evt.deltaY > 0 ? -1 : 1;
       const next = direction > 0 ? vp.zoom * ZOOM_FACTOR : vp.zoom / ZOOM_FACTOR;
       setViewport(zoomAround(vp, pointer, next));
@@ -432,10 +458,39 @@ export function CanvasStage({ project, readOnly = false, externalHighlight = nul
     (e: Konva.KonvaEventObject<DragEvent>) => {
       const stage = stageRef.current;
       if (!stage || e.target !== stage) return;
+      userAdjusted.current = true;
       setViewport({ zoom: latest.current.viewport.zoom, x: stage.x(), y: stage.y() });
     },
     [setViewport],
   );
+
+  const handleTouchMove = useCallback(
+    (e: Konva.KonvaEventObject<TouchEvent>) => {
+      const touches = e.evt.touches;
+      if (touches.length !== 2) return;
+      e.evt.preventDefault();
+      const stage = stageRef.current;
+      if (!stage) return;
+      if (stage.isDragging()) stage.stopDrag();
+      const rect = stage.container().getBoundingClientRect();
+      const p1 = { x: touches[0].clientX - rect.left, y: touches[0].clientY - rect.top };
+      const p2 = { x: touches[1].clientX - rect.left, y: touches[1].clientY - rect.top };
+      const center = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
+      const distance = touchDistance(p1, p2);
+      const previous = pinch.current;
+      pinch.current = { distance, center };
+      if (!previous || previous.distance === 0) return;
+      const vp = latest.current.viewport;
+      const zoomed = zoomAround(vp, previous.center, vp.zoom * (distance / previous.distance));
+      userAdjusted.current = true;
+      setViewport({ zoom: zoomed.zoom, x: zoomed.x + (center.x - previous.center.x), y: zoomed.y + (center.y - previous.center.y) });
+    },
+    [setViewport],
+  );
+
+  const handleTouchEnd = useCallback(() => {
+    pinch.current = null;
+  }, []);
 
   const worldFromDomEvent = useCallback((e: React.DragEvent): Point | null => {
     const stage = stageRef.current;
@@ -553,7 +608,7 @@ export function CanvasStage({ project, readOnly = false, externalHighlight = nul
   return (
     <div
       ref={containerRef}
-      className="relative h-full w-full overflow-hidden bg-gray-200"
+      className="relative h-full w-full touch-none overflow-hidden bg-gray-200"
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
@@ -574,6 +629,8 @@ export function CanvasStage({ project, readOnly = false, externalHighlight = nul
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseLeave}
         onDragEnd={handleStageDragEnd}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
         onContextMenu={(e) => e.evt.preventDefault()}
         style={{ cursor: spaceHeld ? 'grab' : 'default' }}
       >
@@ -632,7 +689,7 @@ export function CanvasStage({ project, readOnly = false, externalHighlight = nul
           )}
         </Layer>
       </Stage>
-      <TableTooltip project={project} />
+      {!readOnly && <TableTooltip project={project} />}
     </div>
   );
 }

@@ -7,6 +7,7 @@ import { t } from '../../i18n/strings';
 import { colorForGroup, getDerived } from '../../store/derived';
 import { useUiStore } from '../../store/uiStore';
 import { CanvasStage } from '../canvas/CanvasStage';
+import { zoomAround } from '../canvas/canvasUtils';
 import { btn, cx, input } from '../common/ui';
 
 type Props = {
@@ -20,6 +21,24 @@ const MAX_RESULTS = 40;
 
 const ZOOM_STEP = 1.25;
 
+const NARROW_QUERY = '(max-width: 639px)';
+
+const ANCHOR_WITH_SHEET = { x: 0.5, y: 0.25 };
+
+const ANCHOR_CENTER = { x: 0.5, y: 0.5 };
+
+/** Tracks whether the viewport is phone-sized, where the table sheet covers the lower part of the plan. */
+function useNarrowScreen(): boolean {
+  const [narrow, setNarrow] = useState(() => typeof window !== 'undefined' && window.matchMedia(NARROW_QUERY).matches);
+  useEffect(() => {
+    const media = window.matchMedia(NARROW_QUERY);
+    const onChange = () => setNarrow(media.matches);
+    media.addEventListener('change', onChange);
+    return () => media.removeEventListener('change', onChange);
+  }, []);
+  return narrow;
+}
+
 /** Uncluttered read-only view for the event day: the plan, who sits where and a search box. */
 export function EventDayView({ project, subtitle, note, onExit }: Props) {
   const [query, setQuery] = useState('');
@@ -30,6 +49,7 @@ export function EventDayView({ project, subtitle, note, onExit }: Props) {
   const requestFit = useUiStore((s) => s.requestFit);
   const setViewport = useUiStore((s) => s.setViewport);
   const viewport = useUiStore((s) => s.viewport);
+  const narrow = useNarrowScreen();
 
   const derived = getDerived(project);
   const counters = derived.counters;
@@ -58,6 +78,11 @@ export function EventDayView({ project, subtitle, note, onExit }: Props) {
   }, [onExit, query, openTableId]);
 
   const openTable = openTableId ? derived.tablesById.get(openTableId) : undefined;
+
+  const zoomAtCenter = (vp: typeof viewport, factor: number) => {
+    const size = useUiStore.getState().stageSize;
+    return zoomAround(vp, { x: size.width / 2, y: size.height / 2 }, Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, vp.zoom * factor)));
+  };
 
   const goToGuest = (guestId: string) => {
     const loc = derived.seatMap.get(guestId);
@@ -130,16 +155,24 @@ export function EventDayView({ project, subtitle, note, onExit }: Props) {
       </header>
 
       <div className="relative min-h-0 flex-1">
-        <CanvasStage project={project} readOnly minimal highlightQuery={query} externalHighlight={highlight} onTableTap={(id) => setOpenTableId(id)} />
-        <div className="absolute right-2 top-2 flex flex-col gap-1">
-          <button type="button" className={cx(btn.base, btn.secondary, btn.icon, 'shadow')} onClick={() => setViewport({ ...viewport, zoom: Math.min(ZOOM_MAX, viewport.zoom * ZOOM_STEP) })} aria-label={t.eventMode.zoomIn}>
+        <CanvasStage
+          project={project}
+          readOnly
+          minimal
+          highlightQuery={query}
+          externalHighlight={highlight}
+          onTableTap={(id) => setOpenTableId(id)}
+          focusAnchor={narrow && openTableId !== null ? ANCHOR_WITH_SHEET : ANCHOR_CENTER}
+        />
+        <div className="absolute right-2 top-2 flex flex-col items-end gap-1.5">
+          <button type="button" className={cx(btn.base, btn.primary, 'h-11 px-3 text-sm shadow-md')} onClick={requestFit}>
+            ⤢ {t.eventMode.center}
+          </button>
+          <button type="button" className={cx(btn.base, btn.secondary, 'h-11 w-11 p-0 text-lg shadow')} onClick={() => setViewport(zoomAtCenter(viewport, ZOOM_STEP))} aria-label={t.eventMode.zoomIn}>
             +
           </button>
-          <button type="button" className={cx(btn.base, btn.secondary, btn.icon, 'shadow')} onClick={() => setViewport({ ...viewport, zoom: Math.max(ZOOM_MIN, viewport.zoom / ZOOM_STEP) })} aria-label={t.eventMode.zoomOut}>
+          <button type="button" className={cx(btn.base, btn.secondary, 'h-11 w-11 p-0 text-lg shadow')} onClick={() => setViewport(zoomAtCenter(viewport, 1 / ZOOM_STEP))} aria-label={t.eventMode.zoomOut}>
             −
-          </button>
-          <button type="button" className={cx(btn.base, btn.secondary, btn.icon, 'shadow')} onClick={requestFit} aria-label={t.topbar.fitToScreen} title={t.topbar.fitToScreen}>
-            ⤢
           </button>
         </div>
         {openTable && (
@@ -148,7 +181,7 @@ export function EventDayView({ project, subtitle, note, onExit }: Props) {
               <h2 className="text-base font-semibold text-gray-900">
                 {openTable.label} <span className="text-xs font-normal text-gray-500">{tableOccupancy(openTable).occupied}/{tableOccupancy(openTable).enabled}</span>
               </h2>
-              <button type="button" className={cx(btn.base, btn.ghost, btn.small)} onClick={() => setOpenTableId(null)} aria-label={t.app.close}>
+              <button type="button" className={cx(btn.base, btn.ghost, 'h-9 w-9 p-0 text-lg')} onClick={() => setOpenTableId(null)} aria-label={t.app.close}>
                 ×
               </button>
             </div>
